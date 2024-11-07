@@ -25,3 +25,44 @@ CREATE TABLE Boletos (
     data_vencimento DATE NOT NULL,
     FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
 );
+
+-- Inserindo dados de teste na tabela Usuarios
+INSERT INTO Usuarios (nome, email, senha, saldo) 
+VALUES 
+('Alice Silva', 'alice.silva@email.com', 'senha123', 1000.00),
+('Bruno Santos', 'bruno.santos@email.com', 'senha456', 2500.00),
+('Carla Nunes', 'carla.nunes@email.com', 'senha789', 500.00),
+('Diego Costa', 'diego.costa@email.com', 'senha321', 3000.00);
+
+SELECT * FROM Usuarios;
+
+SELECT nome, saldo FROM Usuarios WHERE id_usuario = 1;
+
+-- TRANSAÇÃO DE TRANSFERENCIA
+START TRANSACTION;
+
+-- Inserir uma nova transação
+INSERT INTO Transacoes (id_usuario, tipo, valor)
+VALUES (1, 'transferencia', -200.00);
+
+-- Atualizar o saldo do usuário
+UPDATE Usuarios
+SET saldo = saldo - 200.00
+WHERE id_usuario = 1;
+
+COMMIT;
+
+
+-- TRANSAÇÃO DE DEPÓSITO
+START TRANSACTION;
+
+-- Inserir uma nova transação
+INSERT INTO Transacoes (id_usuario, tipo, valor)
+VALUES (2, 'deposito', 300.00);
+
+-- Atualizar o saldo do usuário
+UPDATE Usuarios
+SET saldo = saldo + 300.00
+WHERE id_usuario = 2;
+
+COMMIT;
