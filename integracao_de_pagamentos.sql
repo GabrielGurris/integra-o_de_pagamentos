@@ -66,3 +66,40 @@ SET saldo = saldo + 300.00
 WHERE id_usuario = 2;
 
 COMMIT;
+
+
+-- TRANSAÇÕES POR USUÁRIOS
+SELECT tipo, valor, data_hora
+FROM Transacoes
+WHERE id_usuario = 1
+ORDER BY data_hora DESC;
+
+
+-- RELATÓRIO FINANCEIRO MENSAL PARA UM USUÁRIO ESPECIFICO
+SELECT 
+    DATE_FORMAT(data_hora, '%Y-%m') AS mes_ano,
+    SUM(CASE WHEN tipo = 'deposito' THEN valor ELSE 0 END) AS total_depositos,
+    SUM(CASE WHEN tipo = 'transferencia' THEN valor ELSE 0 END) AS total_transferencias,
+    SUM(valor) AS saldo_mensal
+FROM Transacoes
+WHERE id_usuario = 1
+GROUP BY DATE_FORMAT(data_hora, '%Y-%m')
+ORDER BY mes_ano DESC;
+
+
+-- INSERINDO UM NOVO BOLETO PARA UM USUÁRIO
+INSERT INTO Boletos (id_usuario, valor, data_emissao, data_vencimento)
+VALUES (2, 6500.00, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY));
+
+-- EXIBINDO O VALOR TOTAL DOS BOLETOS POR USUARIO
+SELECT
+	u.nome as Usuário,
+	SUM(valor) AS valor_total_de_boletos
+FROM Boletos b INNER JOIN Usuarios u
+WHERE b.id_usuario = u.id_usuario
+GROUP BY u.nome
+
+
+
+
+
