@@ -89,7 +89,7 @@ ORDER BY mes_ano DESC;
 
 -- INSERINDO UM NOVO BOLETO PARA UM USUÁRIO
 INSERT INTO Boletos (id_usuario, valor, data_emissao, data_vencimento)
-VALUES (2, 6500.00, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY));
+VALUES (1, 600.00, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY));
 
 -- EXIBINDO O VALOR TOTAL DOS BOLETOS POR USUARIO
 SELECT
@@ -97,9 +97,82 @@ SELECT
 	SUM(valor) AS valor_total_de_boletos
 FROM Boletos b INNER JOIN Usuarios u
 WHERE b.id_usuario = u.id_usuario
-GROUP BY u.nome
+GROUP BY u.nome;
+
+
+-- ADICIONANDO A COLUNA STATUS NA TABELA BOLETOS
+ALTER TABLE Boletos
+ADD COLUMN status ENUM('pendente', 'pago') DEFAULT 'pendente';
+
+
+-- Consulta para visualizar boletos pendentes de um usuário específico
+SELECT id_boleto, valor, data_emissao, data_vencimento, status
+FROM Boletos
+WHERE id_usuario = 1
+  AND data_vencimento >= CURDATE()
+  AND status != 'pago'
+ORDER BY data_vencimento;
+
+
+DELIMITER //
+
+CREATE PROCEDURE MostrarBoletosPendentes (IN usuario_id INT)
+BEGIN
+    SELECT id_boleto, valor, data_emissao, data_vencimento, status
+    FROM Boletos
+    WHERE id_usuario = usuario_id
+      AND data_vencimento >= CURDATE()
+      AND status != 'pago'
+	GROUP BY id_boleto;
+END //
+
+DELIMITER ;
+
+CALL MostrarBoletosPendentes(1);
 
 
 
+-- REALIZAR O PAGAMENTO DO BOLETO PELO ID
+DELIMITER //
+
+CREATE PROCEDURE PagarBoleto (IN boleto_id INT)
+BEGIN
+    DECLARE boleto_valor DECIMAL(10, 2);
+    DECLARE usuario_id INT;
+
+    -- Verificar se o boleto existe e está pendente
+    SELECT id_usuario, valor INTO usuario_id, boleto_valor
+    FROM Boletos
+    WHERE id_boleto = boleto_id AND status = 'pendente';
+
+    -- Caso o boleto não seja encontrado ou já esteja pago, finaliza a procedure
+    IF usuario_id IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Boleto não encontrado ou já está pago';
+    ELSE
+        -- Iniciar transação para garantir atomicidade
+        START TRANSACTION;
+
+        -- Inserir a transação de pagamento
+        INSERT INTO Transacoes (id_usuario, tipo, valor)
+        VALUES (usuario_id, 'transferencia', -boleto_valor);
+
+        -- Atualizar o saldo do usuário
+        UPDATE Usuarios
+        SET saldo = saldo - boleto_valor
+        WHERE id_usuario = usuario_id;
+
+        -- Atualizar o status do boleto para pago
+        UPDATE Boletos
+        SET status = 'pago'
+        WHERE id_boleto = boleto_id;
+
+        -- Confirmar as alterações
+        COMMIT;
+    END IF;
+END //
+
+DELIMITER ;
+
+CALL PagarBoleto(1);
 
 
